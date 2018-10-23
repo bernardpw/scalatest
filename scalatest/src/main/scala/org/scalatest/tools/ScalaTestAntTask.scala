@@ -37,7 +37,6 @@ import org.apache.tools.ant.taskdefs.Java
  * <pre>
  *  &lt;path id="scalatest.classpath"&gt;
  *    &lt;pathelement location="${lib}/scalatest.jar"/&gt;
- *    &lt;pathelement location="${lib}/scala-library.jar"/&gt;
  *    &lt;-- scala-actors.jar needed only for ScalaTest <= 1.9.1 on Scala >= 2.10.0 --&gt;
  *    &lt;pathelement location="${lib}/scala-actors.jar"/&gt;
  *  &lt;/path&gt;
@@ -290,13 +289,23 @@ import org.apache.tools.ant.taskdefs.Java
  *   &lt;jvmarg value="-XX:MaxPermSize=128m"/&gt;
  * </pre>
  *
+ * <p>
+ * When <code>fork</code> is true, attribute <code>&lt;classpathproperty&gt;</code> may be used to specify
+ * a property that stores the classpath.
+ * For example, if you are running into 'error=7, Argument list too long' errors,
+ * you could add the following <code>classpathproperty</code> to pass a property containing the file path to a Manifest
+ * JAR
+ * </p>
+ *
+ *
  * @author George Berger
  */
 class ScalaTestAntTask extends Task {
-  private var includes:  String = ""
-  private var excludes:  String = ""
-  private var maxMemory: String = null
-  private var suffixes:  String = null
+  private var includes:          String = ""
+  private var excludes:          String = ""
+  private var maxMemory:         String = null
+  private var suffixes:          String = null
+  private var classpathproperty: String = null
 
   private var parallel      = false
   private var sortSuites    = false
@@ -360,8 +369,10 @@ class ScalaTestAntTask extends Task {
     java.setClassname("org.scalatest.tools.Runner")
 
     val classLoader = getClass.getClassLoader.asInstanceOf[AntClassLoader]
+    val classpath = if (classpathproperty != null) getProject().getProperty(classpathproperty)
+                    else classLoader.getClasspath
 
-    java.setClasspath(new Path(getProject, classLoader.getClasspath))
+    java.setClasspath(new Path(getProject, classpath))
 
     if (maxMemory != null) java.createJvmarg.setValue("-Xmx" + maxMemory)
 
@@ -710,6 +721,13 @@ class ScalaTestAntTask extends Task {
         "reporter type 'reporterclass' requires 'classname' attribute")
 
     args += reporter.getClassName
+  }
+
+  /**
+    * Sets value of the <code>classpathproperty</code> attribute.
+    */
+  def setClasspathproperty(classpathproperty: String): Unit = {
+    this.classpathproperty = classpathproperty
   }
 
   /**
